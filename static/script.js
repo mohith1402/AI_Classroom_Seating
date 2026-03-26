@@ -1,3 +1,24 @@
+// THEME
+function toggleTheme() {
+    const isDark = document.body.classList.contains("dark");
+    applyTheme(isDark ? "light" : "dark");
+}
+
+function applyTheme(theme) {
+    let icon = document.getElementById("themeIcon");
+    if (theme === "dark") {
+        document.body.classList.add("dark");
+        document.body.classList.remove("light");
+        if(icon) icon.innerText = "light_mode";
+    } else {
+        document.body.classList.add("light");
+        document.body.classList.remove("dark");
+        if(icon) icon.innerText = "dark_mode";
+    }
+    localStorage.setItem("theme", theme);
+}
+
+// DYNAMIC INPUTS
 function addField(nameVal = '', groupVal = '') {
     let div = document.getElementById("inputs");
     let field = document.createElement("div");
@@ -43,6 +64,7 @@ function addField(nameVal = '', groupVal = '') {
     div.appendChild(field);
 }
 
+// CSV
 function handleCSV(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -51,14 +73,20 @@ function handleCSV(event) {
     reader.onload = function(e) {
         const text = e.target.result;
         const rows = text.split('\n');
+        let firstInputReplaced = false;
         
         rows.forEach((row, index) => {
-            if (row.trim() === '' || (index === 0 && row.toLowerCase().includes('name'))) return;
-            const cols = row.split(',');
+            const cleanRow = row.trim();
+            if (cleanRow === '' || (index === 0 && cleanRow.toLowerCase().includes('name'))) return;
+            
+            const cols = cleanRow.split(',');
             if (cols.length >= 2) {
-                let firstInput = document.querySelector('input[name="name[]"]');
-                if (index === 1 && firstInput && firstInput.value === '') {
-                    firstInput.parentElement.remove();
+                if (!firstInputReplaced) {
+                    let firstInput = document.querySelector('input[name="name[]"]');
+                    if (firstInput && firstInput.value.trim() === '') {
+                        firstInput.parentElement.remove();
+                    }
+                    firstInputReplaced = true;
                 }
                 addField(cols[0].trim(), cols[1].trim());
             }
@@ -68,80 +96,79 @@ function handleCSV(event) {
     event.target.value = ''; 
 }
 
+// DRAG AND DROP
 let draggedInfo = null;
-
-function drag(event) { 
-    draggedInfo = event.currentTarget; 
-    event.currentTarget.closest('.seat-card').classList.add('dragging'); 
-}
-
+function drag(event) { draggedInfo = event.currentTarget; event.currentTarget.closest('.seat-card').classList.add('dragging'); }
 function allowDrop(event) { event.preventDefault(); }
 function dragEnter(event) { event.preventDefault(); event.currentTarget.classList.add('drag-over'); }
 function dragLeave(event) { event.currentTarget.classList.remove('drag-over'); }
 
-/* UPGRADED DROP FUNCTION */
 function drop(event) {
     event.preventDefault();
     let targetCard = event.currentTarget.closest('.seat-card');
     targetCard.classList.remove('drag-over');
 
-    if (draggedInfo && draggedInfo !== targetCard.querySelector('.student-info')) {
+    if (draggedInfo && draggedInfo.parentElement !== targetCard) {
         let sourceCard = draggedInfo.closest('.seat-card');
         let targetInfo = targetCard.querySelector('.student-info');
         
-        // Swap DOM elements
         sourceCard.appendChild(targetInfo);
         targetCard.appendChild(draggedInfo);
 
-        // Make sure the CSS class reflects the new state
-        if (targetInfo.innerHTML.trim() === "") {
-            sourceCard.classList.add("empty-seat");
-            targetInfo.removeAttribute("draggable");
-        } else {
-            sourceCard.classList.remove("empty-seat");
-            targetInfo.setAttribute("draggable", "true");
-        }
-
-        if (draggedInfo.innerHTML.trim() === "") {
-            targetCard.classList.add("empty-seat");
-            draggedInfo.removeAttribute("draggable");
-        } else {
-            targetCard.classList.remove("empty-seat");
-            draggedInfo.setAttribute("draggable", "true");
-        }
+        [sourceCard, targetCard].forEach(card => {
+            let info = card.querySelector('.student-info');
+            if (info && info.querySelector('.name')) {
+                card.classList.remove('empty-seat');
+                info.setAttribute("draggable", "true");
+            } else {
+                card.classList.add('empty-seat');
+                if (info) info.removeAttribute("draggable");
+            }
+        });
     }
-    
     document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+    draggedInfo = null;
 }
 
-/* ZOOM LOGIC */
+// ZOOM
 let currentZoom = 1.0;
 function zoomIn() { currentZoom += 0.15; applyZoom(); }
 function zoomOut() { if (currentZoom > 0.4) { currentZoom -= 0.15; applyZoom(); } }
 function resetZoom() { currentZoom = 1.0; applyZoom(); }
 function applyZoom() { document.getElementById("capture").style.transform = `scale(${currentZoom})`; }
 
-function toggleTheme(){
-    let body = document.body;
-    let icon = document.getElementById("themeIcon");
-    if(body.classList.contains("light")){ body.classList.replace("light","dark"); icon.innerText = "light_mode"; }
-    else { body.classList.replace("dark","light"); icon.innerText = "dark_mode"; }
-}
-
 function showLoading(){ document.getElementById("loading").style.display = "block"; }
 
+// DOWNLOAD IMAGE
 function downloadImage(){
-    resetZoom(); 
+    const captureDiv = document.getElementById("capture");
+    const wrapper = document.querySelector(".table-wrapper");
+    
+    const originalTransform = captureDiv.style.transform;
+    const originalOverflow = wrapper.style.overflow;
+    
+    captureDiv.style.transform = 'none';
+    wrapper.style.overflow = 'visible'; 
+    
     setTimeout(() => {
-        const captureDiv = document.getElementById("capture");
         const isDark = document.body.classList.contains("dark");
-        const bgColor = isDark ? "#121418" : "#f0f4fa"; 
+        const bgColor = isDark ? "#0b0c10" : "#fdfcff"; 
 
-        html2canvas(captureDiv, { backgroundColor: bgColor, scale: 2, borderRadius: 24 }).then(canvas => {
+        html2canvas(captureDiv, { 
+            backgroundColor: bgColor, 
+            scale: 2, 
+            useCORS: true,
+            logging: false, 
+            windowWidth: captureDiv.scrollWidth, 
+            windowHeight: captureDiv.scrollHeight 
+        }).then(canvas => {
             let link = document.createElement("a");
             link.download = "seating_arrangement.png";
             link.href = canvas.toDataURL("image/png");
             link.click();
+            
+            captureDiv.style.transform = originalTransform;
+            wrapper.style.overflow = originalOverflow;
         });
-    }, 300); 
+    }, 150); 
 }

@@ -1,22 +1,29 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>AI Seating</title>
+    <meta charset="UTF-8">
+    <title>AI Classroom Seating</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
-<body class="light">
+<body>
+    <script>
+        // Set theme immediately to prevent white flash
+        document.body.className = localStorage.getItem("theme") || "light";
+    </script>
 
-    <button class="toggle" onclick="toggleTheme()" aria-label="Toggle Theme">
-        <span class="material-symbols-rounded" id="themeIcon">dark_mode</span>
+    <button class="toggle hide-on-print" onclick="toggleTheme()" aria-label="Toggle Theme">
+        <span class="material-symbols-rounded" id="themeIcon">
+            <script>document.write(document.body.className === 'dark' ? 'light_mode' : 'dark_mode');</script>
+        </span>
     </button>
 
-    <h1 class="title">AI Classroom Seating</h1>
+    <h1 class="title hide-on-print">AI Classroom Seating</h1>
 
-    <div class="card">
+    <div class="card hide-on-print">
         <form method="POST" onsubmit="showLoading()">
             <div class="grid-setup">
                 <div>
@@ -56,17 +63,17 @@
                             <option>M.Sc Computer Science</option>
                         </optgroup>
                     </select>
-                    <div style="width: 44px;"></div> 
+                    <div style="width: 44px; height: 44px;"></div> 
                 </div>
             </div>
 
             <div class="btn-group">
                 <input type="file" id="csvFile" accept=".csv" style="display: none;" onchange="handleCSV(event)">
                 <button type="button" class="btn-tertiary" onclick="document.getElementById('csvFile').click()">
-                    <span class="material-symbols-rounded">upload_file</span> CSV
+                    <span class="material-symbols-rounded">upload_file</span> CSV Import
                 </button>
                 <button type="button" class="btn-secondary" onclick="addField()">
-                    <span class="material-symbols-rounded">person_add</span> Add
+                    <span class="material-symbols-rounded">person_add</span> Add Row
                 </button>
                 <button type="button" class="btn-tertiary" onclick="location.href='/'">
                     <span class="material-symbols-rounded">restart_alt</span> Reset
@@ -79,17 +86,18 @@
     </div>
 
     {% if error %}
-        <p class="error">{{ error }}</p>
+        <p class="error hide-on-print">{{ error }}</p>
     {% endif %}
 
-    <div id="loading" class="loading">
+    <div id="loading" class="loading hide-on-print" style="display: none;">
         <div class="spinner"></div>
         <p>Calculating optimal seating...</p>
     </div>
 
     {% if seats %}
     <div class="card" id="result-card">
-        <h2 style="text-align: center;">Seating Arrangement</h2>
+        <h2 style="text-align: center;" class="hide-on-print">Seating Arrangement</h2>
+        
         <p style="text-align: center; font-size: 0.85rem; color: var(--md-outline); margin-top: -10px; margin-bottom: 20px;" class="hide-on-print">
             <span class="material-symbols-rounded" style="font-size: 16px; vertical-align: middle;">drag_indicator</span> 
             Drag and drop students to swap seats manually
@@ -108,12 +116,12 @@
                         {% for j in range(cols) %}
                         <div class="seat-card {% if not seats[i][j] %}empty-seat{% endif %}" ondragover="allowDrop(event)" ondrop="drop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)">
                             
-                            <div class="seat-number">S{{i*cols+j+1}}</div>
+                            <div class="seat-number">S{{ (i * cols) + j + 1 }}</div>
                             
                             <div class="student-info" {% if seats[i][j] %}draggable="true"{% endif %} ondragstart="drag(event)">
                                 {% if seats[i][j] %}
-                                    <div class="name">{{seats[i][j][0]}}</div>
-                                    <div class="group-name">{{seats[i][j][1]}}</div>
+                                    <div class="name">{{ seats[i][j][0] }}</div>
+                                    <div class="group-name">{{ seats[i][j][1] }}</div>
                                 {% endif %}
                             </div>
 
@@ -124,19 +132,18 @@
             </div>
         </div>
 
-        <div style="text-align: center; margin-top: 30px; display: flex; justify-content: center; gap: 15px;" class="hide-on-print">
+        <div style="text-align: center; margin-top: 30px; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;" class="hide-on-print">
             <button class="btn-secondary" onclick="downloadImage()">
                 <span class="material-symbols-rounded">download</span> Download Image
             </button>
-            <button class="btn-tertiary" onclick="window.print()">
+            <button class="btn-primary" onclick="window.print()">
                 <span class="material-symbols-rounded">print</span> Print Page
             </button>
         </div>
     </div>
     {% endif %}
 
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
-
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js" defer></script>
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
 </body>
 </html>
