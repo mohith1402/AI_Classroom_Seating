@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Classroom Seating</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <script>
+        // Set theme immediately to prevent white flash
+        document.body.className = localStorage.getItem("theme") || "light";
+    </script>
+
+    <button class="toggle hide-on-print" onclick="toggleTheme()" aria-label="Toggle Theme">
+        <span class="material-symbols-rounded" id="themeIcon">
+            <script>document.write(document.body.className === 'dark' ? 'light_mode' : 'dark_mode');</script>
+        </span>
+    </button>
+
+    <h1 class="title hide-on-print">AI Classroom Seating</h1>
+
+    <div class="card hide-on-print">
+        <form method="POST" onsubmit="showLoading()">
+            <div class="grid-setup">
+                <div>
+                    <label>Rows</label>
+                    <input type="number" name="rows" value="{{ rows | default(3) }}" min="1">
+                </div>
+                <div>
+                    <label>Cols</label>
+                    <input type="number" name="cols" value="{{ cols | default(3) }}" min="1">
+                </div>
+            </div>
+
+            <h3 style="text-align: center;">Student List</h3>
+
+            <div id="inputs">
+                <div class="row">
+                    <input name="name[]" placeholder="Student Name" required>
+                    <select name="group[]">
+                        <optgroup label="UG Programs">
+                            <option>B.Tech CSE</option>
+                            <option>B.Tech IT</option>
+                            <option>B.Tech ECE</option>
+                            <option>B.Tech EEE</option>
+                            <option>B.Tech Mechanical</option>
+                            <option>B.Tech Civil</option>
+                            <option>B.Sc Computer Science</option>
+                            <option>BCA</option>
+                            <option>BBA</option>
+                            <option>B.Com</option>
+                        </optgroup>
+                        <optgroup label="PG Programs">
+                            <option>M.Tech CSE</option>
+                            <option>M.Tech VLSI</option>
+                            <option>M.Tech Structural</option>
+                            <option>MCA</option>
+                            <option>MBA</option>
+                            <option>M.Sc Computer Science</option>
+                        </optgroup>
+                    </select>
+                    <div style="width: 44px; height: 44px;"></div> 
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <input type="file" id="csvFile" accept=".csv" style="display: none;" onchange="handleCSV(event)">
+                <button type="button" class="btn-tertiary" onclick="document.getElementById('csvFile').click()">
+                    <span class="material-symbols-rounded">upload_file</span> CSV Import
+                </button>
+                <button type="button" class="btn-secondary" onclick="addField()">
+                    <span class="material-symbols-rounded">person_add</span> Add Row
+                </button>
+                <button type="button" class="btn-tertiary" onclick="location.href='/'">
+                    <span class="material-symbols-rounded">restart_alt</span> Reset
+                </button>
+                <button type="submit" class="btn-primary">
+                    <span class="material-symbols-rounded">auto_awesome</span> Generate
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {% if error %}
+        <p class="error hide-on-print">{{ error }}</p>
+    {% endif %}
+
+    <div id="loading" class="loading hide-on-print" style="display: none;">
+        <div class="spinner"></div>
+        <p>Calculating optimal seating...</p>
+    </div>
+
+    {% if seats %}
+    <div class="card" id="result-card">
+        <h2 style="text-align: center;" class="hide-on-print">Seating Arrangement</h2>
+        
+        <p style="text-align: center; font-size: 0.85rem; color: var(--md-outline); margin-top: -10px; margin-bottom: 20px;" class="hide-on-print">
+            <span class="material-symbols-rounded" style="font-size: 16px; vertical-align: middle;">drag_indicator</span> 
+            Drag and drop students to swap seats manually
+        </p>
+
+        <div class="btn-group hide-on-print" style="margin-bottom: 20px;">
+            <button type="button" class="btn-tertiary" onclick="zoomIn()"><span class="material-symbols-rounded">zoom_in</span> Zoom In</button>
+            <button type="button" class="btn-tertiary" onclick="zoomOut()"><span class="material-symbols-rounded">zoom_out</span> Zoom Out</button>
+            <button type="button" class="btn-tertiary" onclick="resetZoom()"><span class="material-symbols-rounded">search</span> Reset Zoom</button>
+        </div>
+
+        <div class="table-wrapper">
+            <div id="capture" class="zoom-container">
+                <div class="seating-grid" style="--cols: {{ cols }};">
+                    {% for i in range(rows) %}
+                        {% for j in range(cols) %}
+                        <div class="seat-card {% if not seats[i][j] %}empty-seat{% endif %}" ondragover="allowDrop(event)" ondrop="drop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)">
+                            
+                            <div class="seat-number">S{{ (i * cols) + j + 1 }}</div>
+                            
+                            <div class="student-info" {% if seats[i][j] %}draggable="true"{% endif %} ondragstart="drag(event)">
+                                {% if seats[i][j] %}
+                                    <div class="name">{{ seats[i][j][0] }}</div>
+                                    <div class="group-name">{{ seats[i][j][1] }}</div>
+                                {% endif %}
+                            </div>
+
+                        </div>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;" class="hide-on-print">
+            <button class="btn-secondary" onclick="downloadImage()">
+                <span class="material-symbols-rounded">download</span> Download Image
+            </button>
+            <button class="btn-primary" onclick="window.print()">
+                <span class="material-symbols-rounded">print</span> Print Page
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js" defer></script>
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+</body>
+</html>
